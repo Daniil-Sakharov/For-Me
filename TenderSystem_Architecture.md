@@ -2,16 +2,18 @@
 
 ## 📋 Общее описание проекта
 
-Система автоматизации поиска и анализа медицинских тендеров с интеграцией AI для анализа технических заданий и автоматической отправки коммерческих предложений.
+Интеллектуальная система автоматизации полного цикла работы с тендерами: от поиска и анализа до ценообразования и участия в торгах. Система использует AI для анализа документов, накопления знаний о товарах и оптимизации ценовых стратегий.
 
 ## 🎯 Основные функции системы
 
-1. **Парсинг тендерных площадок** (szvo.gov35.ru, zakupki.gov.ru)
-2. **AI-анализ тендеров** на соответствие критериям (медицинское оборудование)
-3. **Извлечение и анализ технических заданий** из документов
-4. **Поиск поставщиков** медицинского оборудования
-5. **Автоматическая отправка запросов** на коммерческие предложения
-6. **Управление процессом** через REST API и веб-интерфейс
+1. **Интеллектуальный парсинг тендерных площадок** (szvo.gov35.ru, zakupki.gov.ru и др.)
+2. **AI-фильтрация тендеров** по медицинскому оборудованию (исключая услуги)
+3. **Автоматическое извлечение всех документов** тендера (техзадания + дополнительные файлы)
+4. **Глубокий анализ технических заданий** с извлечением товаров из таблиц
+5. **Накопление и каталогизация товаров** с сайтов поставщиков в БД
+6. **AI-коммуникация с менеджерами** для получения коммерческих предложений
+7. **Анализ истории тендеров** и AI-рекомендации по ценообразованию
+8. **Полный цикл участия в тендере** с прогнозированием результатов
 
 ---
 
@@ -34,6 +36,8 @@ tender-automation-system/
 │   │   │   ├── tender.go
 │   │   │   ├── analysis.go
 │   │   │   ├── supplier.go
+│   │   │   ├── product.go
+│   │   │   ├── pricing.go
 │   │   │   └── auth.go
 │   │   ├── middleware/
 │   │   │   ├── auth.go
@@ -46,39 +50,53 @@ tender-automation-system/
 │   │   │   ├── tender.go
 │   │   │   ├── document.go
 │   │   │   ├── supplier.go
+│   │   │   ├── product.go       # Каталог товаров
+│   │   │   ├── pricing.go       # Ценовая аналитика
+│   │   │   ├── tender_result.go # Результаты тендеров
 │   │   │   └── analysis.go
 │   │   ├── services/
 │   │   │   ├── tender_service.go
 │   │   │   ├── analysis_service.go
 │   │   │   ├── document_service.go
-│   │   │   └── email_service.go
+│   │   │   ├── product_catalog_service.go
+│   │   │   ├── pricing_ai_service.go
+│   │   │   ├── email_ai_service.go
+│   │   │   └── tender_history_service.go
 │   │   └── ports/              # Интерфейсы (ports & adapters)
 │   │       ├── repositories.go
 │   │       ├── parsers.go
 │   │       ├── analyzers.go
+│   │       ├── ai_models.go     # AI интерфейсы
 │   │       └── notifiers.go
 │   ├── adapters/               # Внешние адаптеры
 │   │   ├── repositories/
 │   │   │   ├── postgres/
 │   │   │   │   ├── tender_repo.go
 │   │   │   │   ├── document_repo.go
-│   │   │   │   └── supplier_repo.go
+│   │   │   │   ├── supplier_repo.go
+│   │   │   │   ├── product_repo.go
+│   │   │   │   ├── pricing_repo.go
+│   │   │   │   └── tender_result_repo.go
 │   │   │   └── redis/
 │   │   │       └── cache_repo.go
 │   │   ├── parsers/
 │   │   │   ├── zakupki_parser.go
 │   │   │   ├── szvo_parser.go
+│   │   │   ├── supplier_site_parser.go
 │   │   │   └── base_parser.go
-│   │   ├── analyzers/
-│   │   │   ├── openai_analyzer.go
-│   │   │   ├── claude_analyzer.go
-│   │   │   └── document_processor.go
+│   │   ├── ai/                 # AI модели и адаптеры
+│   │   │   ├── llama_adapter.go
+│   │   │   ├── openai_adapter.go
+│   │   │   ├── document_processor.go
+│   │   │   ├── pricing_analyzer.go
+│   │   │   └── email_bot.go
 │   │   ├── notifiers/
 │   │   │   ├── email_sender.go
 │   │   │   └── telegram_bot.go
 │   │   └── external/
 │   │       ├── file_downloader.go
-│   │       └── web_scraper.go
+│   │       ├── web_scraper.go
+│   │       └── product_finder.go
 │   ├── config/
 │   │   ├── config.go
 │   │   └── database.go
@@ -253,9 +271,11 @@ type EventBus interface {
 - **Очереди:** Redis + asynq или RabbitMQ
 
 ### **AI & ML**
-- **OpenAI API:** GPT-4 для анализа текстов
-- **Document Processing:** UniDoc или Aspose
-- **Text Processing:** GoNLP, regexp
+- **Primary AI:** Llama 4 (через Ollama или API) для основного анализа
+- **Backup AI:** OpenAI GPT-4 как резервный вариант
+- **Document Processing:** UniDoc для DOC/DOCX, pdfcpu для PDF
+- **Text Processing:** GoNLP, regexp для предобработки
+- **Price Analytics:** Собственные алгоритмы + AI для ценового анализа
 
 ### **Инфраструктура**
 - **Контейнеризация:** Docker + Docker Compose
@@ -272,40 +292,54 @@ type EventBus interface {
 
 ## 🧠 Детальный разбор компонентов
 
-### 1. **🕷️ Парсинг тендерных площадок**
+### 1. **🕷️ Интеллектуальный парсинг тендерных площадок**
 
 #### Технические детали:
 ```go
 type TenderParser interface {
     ParseTenders(filters ParseFilters) ([]*RawTender, error)
     ParseTenderDetails(tenderID string) (*TenderDetails, error)
-    DownloadDocuments(tender *TenderDetails) ([]*Document, error)
+    DownloadAllDocuments(tender *TenderDetails) ([]*Document, error)
+    NavigateToDocumentsSection(tenderURL string) error
 }
 
 type ParseFilters struct {
-    Keywords    []string
-    Categories  []string
-    Region      string
-    DateFrom    time.Time
-    DateTo      time.Time
-    MaxPrice    decimal.Decimal
+    Keywords       []string
+    Categories     []string
+    Region         string
+    DateFrom       time.Time
+    DateTo         time.Time
+    MaxPrice       decimal.Decimal
+    ExcludeServices bool `default:"true"` // Исключать услуги
+    MedicalOnly     bool `default:"true"` // Только медицинское оборудование
+}
+
+type DocumentType struct {
+    Name           string
+    Type           string // "technical_spec", "additional", "contract"
+    IsTechnicalSpec bool
+    Priority       int
 }
 ```
 
-#### Стратегия парсинга:
-1. **User-Agent ротация** для избежания блокировок
-2. **Задержки между запросами** (1-3 сек)
-3. **Proxy ротация** при необходимости
-4. **Распределенная нагрузка** через очереди
-5. **Инкрементальный парсинг** (только новые тендеры)
+#### Расширенная стратегия парсинга:
+1. **Автоматическая навигация** к разделу "Документы" в каждом тендере
+2. **Распознавание типов документов** (техзадание vs дополнительные)
+3. **Скачивание ВСЕХ документов** для полного анализа
+4. **User-Agent ротация** для избежания блокировок
+5. **Задержки между запросами** (1-3 сек)
+6. **Proxy ротация** при необходимости
+7. **Распределенная нагрузка** через очереди
+8. **Инкрементальный парсинг** (только новые тендеры)
 
 #### Обработка ошибок:
 - Exponential backoff при ошибках
 - Логирование всех неудачных попыток
 - Уведомления при критических ошибках
 - Fallback на ручной режим
+- Автоматический retry при сбоях скачивания
 
-### 2. **🤖 AI Анализ тендеров**
+### 2. **🤖 Мультимодальный AI Анализ**
 
 #### Архитектура AI модуля:
 ```go
@@ -313,33 +347,52 @@ type AIAnalyzer interface {
     AnalyzeTender(tender *entities.Tender) (*AnalysisResult, error)
     ClassifyCategory(description string) (Category, float64, error)
     ExtractRequirements(techSpec string) (*Requirements, error)
+    ExtractProductsFromTable(documentText string) ([]*Product, error)
+    AnalyzeAllDocuments(documents []*Document) (*CompleteAnalysis, error)
     GenerateSearchTerms(requirements *Requirements) ([]string, error)
 }
 
 type AnalysisResult struct {
-    IsRelevant      bool              `json:"is_relevant"`
-    Confidence      float64           `json:"confidence"`
-    Category        string            `json:"category"`
-    Requirements    []*Requirement    `json:"requirements"`
-    KeyTerms        []string          `json:"key_terms"`
-    EstimatedValue  decimal.Decimal   `json:"estimated_value"`
-    Reasoning       string            `json:"reasoning"`
+    IsRelevant         bool               `json:"is_relevant"`
+    Confidence         float64            `json:"confidence"`
+    Category           string             `json:"category"`
+    Requirements       []*Requirement     `json:"requirements"`
+    ExtractedProducts  []*Product         `json:"extracted_products"`
+    DeliveryTimeframe  string             `json:"delivery_timeframe"`
+    SpecialConditions  []string           `json:"special_conditions"`
+    KeyTerms           []string           `json:"key_terms"`
+    EstimatedValue     decimal.Decimal    `json:"estimated_value"`
+    Reasoning          string             `json:"reasoning"`
+}
+
+type Product struct {
+    Name           string          `json:"name"`
+    Description    string          `json:"description"`
+    Quantity       int             `json:"quantity"`
+    Unit           string          `json:"unit"`
+    Specifications map[string]string `json:"specifications"`
+    Category       string          `json:"category"`
+    SearchTerms    []string        `json:"search_terms"`
 }
 ```
 
-#### Промпты для OpenAI:
+#### Промпты для Llama 4:
 ```json
 {
-  "system_prompt": "Ты эксперт по медицинским тендерам. Анализируй тендеры и определяй, относятся ли они к поставке медицинского оборудования (не услуги!).",
-  "user_prompt": "Проанализируй этот тендер: {tender_text}. Ответь в JSON формате с полями: is_relevant, confidence, category, requirements, reasoning."
+  "system_prompt": "Ты эксперт-аналитик медицинских тендеров с глубокими знаниями медицинского оборудования. Твоя задача: анализировать документы тендеров и извлекать структурированную информацию о товарах. ВАЖНО: работаем ТОЛЬКО с поставкой товаров, НЕ с услугами!",
+  
+  "document_analysis_prompt": "Проанализируй все документы тендера. Извлеки:\n1. Список всех товаров из таблиц технического задания\n2. Сроки поставки\n3. Особые условия\n4. Оцени релевантность (медицинское оборудование)\nДокументы: {documents_text}",
+  
+  "product_extraction_prompt": "Из этой таблицы извлеки все товары с характеристиками:\n{table_text}\nВерни в JSON формате массив товаров с полями: name, description, quantity, unit, specifications, category."
 }
 ```
 
 #### Обработка различных типов документов:
 - **DOC/DOCX:** UniDoc для извлечения текста и таблиц
-- **PDF:** pdfcpu или Apache Tika
+- **PDF:** pdfcpu для текста + pdf2go для сложных макетов
 - **XLS/XLSX:** excelize для табличных данных
-- **RTF:** специализированные парсеры
+- **RTF:** специализированные парсеры Go
+- **Изображения таблиц:** OCR через Tesseract + AI для анализа
 
 ### 3. **📧 Email автоматизация**
 
@@ -370,37 +423,107 @@ type EmailTemplate struct {
 - Статистика ответов
 - Автоматическая категоризация ответов
 
-### 4. **🔍 Поиск поставщиков**
+### 4. **🔍 Интеллектуальный поиск и каталогизация товаров**
 
-#### Стратегия поиска:
+#### Стратегия поиска и накопления:
 ```go
+type ProductCatalogService interface {
+    SearchProductOnline(product *Product) ([]*SupplierProduct, error)
+    CatalogizeSupplierSite(siteURL string) error
+    FindProductInCatalog(product *Product) ([]*CatalogedProduct, error)
+    UpdateProductCatalog() error
+}
+
 type SupplierFinder interface {
     FindSuppliers(equipment *Equipment) ([]*Supplier, error)
     VerifySupplier(supplier *Supplier) (*SupplierVerification, error)
     GetContactInfo(supplier *Supplier) (*ContactInfo, error)
+    ParseSupplierProducts(supplierURL string) ([]*Product, error)
+}
+
+type CatalogedProduct struct {
+    ProductID       string          `json:"product_id"`
+    Name           string          `json:"name"`
+    Description    string          `json:"description"`
+    SupplierID     string          `json:"supplier_id"`
+    ProductURL     string          `json:"product_url"`
+    Specifications map[string]string `json:"specifications"`
+    PriceRange     string          `json:"price_range"`
+    Availability   string          `json:"availability"`
+    LastUpdated    time.Time       `json:"last_updated"`
 }
 ```
 
-#### Источники поставщиков:
-1. **Поиск в Google/Yandex** по ключевым словам
-2. **Отраслевые каталоги** (medprom.ru, medrussia.ru)
+#### Источники поставщиков и стратегия накопления:
+1. **Поиск в Google/Yandex** по ключевым словам товаров
+2. **Отраслевые каталоги** (medprom.ru, medrussia.ru, zdrav.ru)
 3. **Социальные сети** и профессиональные платформы
 4. **Собственная база данных** проверенных поставщиков
+5. **Автоматическая каталогизация** - парсинг сайтов поставщиков для накопления товаров
+6. **Сохранение URL товаров** для быстрого доступа в будущем
+7. **Периодическое обновление** каталога товаров
+8. **Поиск по накопленному каталогу** перед поиском в интернете
 
-### 5. **📊 Система аналитики**
+### 5. **🧠 AI-система ценообразования и прогнозирования**
+
+#### Архитектура модуля ценообразования:
+```go
+type PricingAI interface {
+    AnalyzeTenderHistory(tenderID string) (*PricingAnalysis, error)
+    RecommendOptimalPrice(tender *Tender, products []*Product) (*PriceRecommendation, error)
+    PredictWinningChance(price decimal.Decimal, tender *Tender) (float64, error)
+    LearnFromTenderResult(result *TenderResult) error
+}
+
+type PricingAnalysis struct {
+    HistoricalPrices    []decimal.Decimal  `json:"historical_prices"`
+    AverageWinningPrice decimal.Decimal    `json:"average_winning_price"`
+    MarketTrends        []*MarketTrend     `json:"market_trends"`
+    CompetitorAnalysis  []*Competitor      `json:"competitor_analysis"`
+    Recommendations    *PriceRecommendation `json:"recommendations"`
+}
+
+type TenderResult struct {
+    TenderID      string          `json:"tender_id"`
+    WinnerCompany string          `json:"winner_company"`
+    WinningPrice  decimal.Decimal `json:"winning_price"`
+    OurBid        decimal.Decimal `json:"our_bid"`
+    OurPosition   int             `json:"our_position"`
+    ResultDate    time.Time       `json:"result_date"`
+    Products      []*Product      `json:"products"`
+}
+```
+
+#### AI Email Bot для коммуникации с менеджерами:
+```go
+type EmailAI interface {
+    GenerateInitialRequest(product *Product, supplier *Supplier) (*EmailTemplate, error)
+    ParseManagerReply(emailContent string) (*ReplyAnalysis, error)
+    GenerateFollowUp(previousConversation []*Email) (*EmailTemplate, error)
+    NegotiatePrice(targetPrice decimal.Decimal, currentOffer decimal.Decimal) (*EmailTemplate, error)
+}
+```
+
+### 6. **📊 Расширенная система аналитики**
 
 #### Метрики для отслеживания:
 - Количество найденных тендеров
-- Процент релевантных тендеров
+- Процент релевантных тендеров (с AI фильтрацией)
 - Успешность отправки запросов
 - Количество полученных КП
 - ROI по каждому тендеру
+- **Точность ценовых прогнозов AI**
+- **Процент выигранных тендеров**
+- **Эффективность накопленного каталога товаров**
 
 #### Дашборд компоненты:
 - Графики динамики тендеров
 - Тепловая карта регионов
 - Топ категорий оборудования
 - Эффективность поставщиков
+- **AI Pricing Dashboard** - анализ точности прогнозов
+- **Каталог товаров** - статистика накопления и использования
+- **Email Bot Performance** - эффективность AI-коммуникации
 
 ---
 
@@ -462,14 +585,61 @@ CREATE TABLE suppliers (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Отправленные запросы
+-- Каталог товаров от поставщиков
+CREATE TABLE cataloged_products (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    product_name VARCHAR(500) NOT NULL,
+    description TEXT,
+    supplier_id UUID REFERENCES suppliers(id),
+    product_url TEXT,
+    specifications JSONB,
+    price_range VARCHAR(100),
+    availability VARCHAR(100),
+    category VARCHAR(200),
+    search_terms TEXT[],
+    last_updated TIMESTAMP DEFAULT NOW(),
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Результаты тендеров для обучения AI
+CREATE TABLE tender_results (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tender_id UUID REFERENCES tenders(id),
+    winner_company VARCHAR(500),
+    winning_price DECIMAL(15,2),
+    our_bid DECIMAL(15,2),
+    our_position INTEGER,
+    total_participants INTEGER,
+    result_date TIMESTAMP,
+    products_data JSONB,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Ценовая аналитика AI
+CREATE TABLE pricing_analysis (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tender_id UUID REFERENCES tenders(id),
+    recommended_price DECIMAL(15,2),
+    confidence_score DECIMAL(3,2),
+    winning_probability DECIMAL(3,2),
+    market_analysis JSONB,
+    competitor_analysis JSONB,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Отправленные запросы и email переписка
 CREATE TABLE commercial_requests (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tender_id UUID REFERENCES tenders(id),
     supplier_id UUID REFERENCES suppliers(id),
-    email_sent_at TIMESTAMP,
-    reply_received_at TIMESTAMP,
+    product_id UUID REFERENCES cataloged_products(id),
+    email_thread JSONB, -- История переписки
+    initial_request_sent_at TIMESTAMP,
+    last_reply_at TIMESTAMP,
+    commercial_offer_received BOOLEAN DEFAULT FALSE,
+    final_price DECIMAL(15,2),
     status VARCHAR(50) DEFAULT 'sent',
+    ai_conversation_id VARCHAR(255),
     created_at TIMESTAMP DEFAULT NOW()
 );
 ```
@@ -554,20 +724,35 @@ make run-analyzer
 
 ---
 
+## 💡 О модели Llama 4
+
+**Важное замечание:** На момент написания (январь 2025) модели "Llama 4 Maverick" не существует. Возможные варианты:
+
+1. **Llama 3.1 или 3.2** - актуальные версии от Meta
+2. **Llama 3 70B/405B** - для сложных задач анализа
+3. **Запуск через Ollama** локально для экономии
+4. **API провайдеры** - Together AI, Replicate для облачного доступа
+
+**Рекомендация:** Начни с **Llama 3.1 8B** через Ollama для разработки, затем переходи на **70B** для продакшена.
+
 ## 🔍 Рекомендации по собеседованиям
 
 Этот проект покрывает все ключевые темы для Middle Go Developer:
 
 1. **Архитектура:** Clean Architecture, микросервисы
-2. **Базы данных:** PostgreSQL, миграции, оптимизация
+2. **Базы данных:** PostgreSQL, миграции, оптимизация, JSONB
 3. **Concurrency:** Goroutines, channels, worker pools
 4. **HTTP:** REST API, middleware, аутентификация  
-5. **Testing:** Unit, integration, mocking
-6. **DevOps:** Docker, CI/CD, мониторинг
-7. **Внешние API:** HTTP клиенты, rate limiting
-8. **Обработка данных:** Парсинг, валидация, трансформация
+5. **AI Integration:** Работа с LLM API, prompt engineering
+6. **Web Scraping:** Сложный парсинг, обход защиты
+7. **Document Processing:** Работа с различными форматами файлов
+8. **Testing:** Unit, integration, mocking
+9. **DevOps:** Docker, CI/CD, мониторинг
+10. **Внешние API:** HTTP клиенты, rate limiting
+11. **Обработка данных:** Парсинг, валидация, трансформация
+12. **Машинное обучение:** Интеграция AI в бизнес-логику
 
-**Совет:** Подготовь примеры кода и архитектурных решений из этого проекта для демонстрации на собеседованиях.
+**Совет:** Подготовь примеры кода и архитектурных решений из этого проекта для демонстрации на собеседованиях. Особенно впечатлят AI-компоненты и сложная архитектура.
 
 ---
 
