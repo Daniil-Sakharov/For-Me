@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChatHistoryState">
+    <option name="serializedSessions">
+      <map>
+        <entry key="64aef5d3-505d-43a9-bb37-317e3b98a0f0" value="{&quot;id&quot;:&quot;64aef5d3-505d-43a9-bb37-317e3b98a0f0&quot;,&quot;name&quot;:&quot;Go Conversion From Interface to Int&quot;,&quot;timestamp&quot;:1751303597093,&quot;messages&quot;:[{&quot;role&quot;:&quot;user&quot;,&quot;content&quot;:[{&quot;type&quot;:&quot;text&quot;,&quot;text&quot;:&quot;\u003cuser_query\u003e\nкак привести тип interface{} к int ?\n\u003c/user_query\u003e&quot;}]}]}" />
+      </map>
+    </option>
+  </component>
+</project>
