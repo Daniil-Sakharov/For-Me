@@ -13,69 +13,323 @@ import (
 	"time"
 )
 
-// 📋 ОСНОВНАЯ МОДЕЛЬ ТЕНДЕРА
+// TODO: Основная доменная сущность тендера
+// Представляет чистую доменную модель без зависимостей от внешних систем
+// Содержит всю бизнес-логику, связанную с тендером
 type Tender struct {
-	// ✅ Базовые поля
-	ID        uint      `json:"id" db:"id"`
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+	// TODO: Базовые поля тендера
+	ID          uint      `json:"id"`
+	TenderID    string    `json:"tender_id"`    // Номер тендера на площадке
+	Title       string    `json:"title"`        // Название тендера
+	Description string    `json:"description"`  // Описание закупки
+	Platform    string    `json:"platform"`     // Платформа (zakupki, szvo, spb)
+	URL         string    `json:"url"`          // Ссылка на тендер
+
+	// TODO: Заказчик и контактная информация
+	Customer        string `json:"customer"`         // Наименование заказчика
+	CustomerINN     string `json:"customer_inn"`     // ИНН заказчика
+	CustomerAddress string `json:"customer_address"` // Адрес заказчика
+	ContactPerson   string `json:"contact_person"`   // Контактное лицо
+	ContactPhone    string `json:"contact_phone"`    // Телефон
+	ContactEmail    string `json:"contact_email"`    // Email
+
+	// TODO: Финансовая информация
+	StartPrice    float64 `json:"start_price"`    // Начальная (максимальная) цена
+	Currency      string  `json:"currency"`       // Валюта (обычно RUB)
+	PriceType     string  `json:"price_type"`     // Тип цены (за весь объем/за единицу)
+	VAT           bool    `json:"vat"`            // НДС включен/исключен
+	EstimatedCost float64 `json:"estimated_cost"` // Ориентировочная стоимость
+
+	// TODO: Временные рамки
+	PublishedAt        time.Time  `json:"published_at"`        // Дата публикации
+	ApplicationDeadline time.Time `json:"application_deadline"` // Дедлайн подачи заявок
+	ContractStartDate  *time.Time `json:"contract_start_date"` // Дата начала поставки
+	ContractEndDate    *time.Time `json:"contract_end_date"`   // Дата окончания поставки
+	AuctionDate        *time.Time `json:"auction_date"`        // Дата аукциона (если есть)
+
+	// TODO: Категории и теги
+	Category       string   `json:"category"`        // Основная категория
+	Subcategory    string   `json:"subcategory"`     // Подкатегория
+	Keywords       []string `json:"keywords"`        // Ключевые слова
+	Tags           []string `json:"tags"`            // Теги для фильтрации
+	ProductTypes   []string `json:"product_types"`   // Типы продукции
+	MedicalCategory string  `json:"medical_category"` // Медицинская категория
+
+	// TODO: Статус тендера
+	Status           TenderStatus `json:"status"`            // Текущий статус
+	ProcessingStage  string       `json:"processing_stage"`  // Этап обработки в нашей системе
+	ParticipantCount int          `json:"participant_count"` // Количество участников
+	IsActive         bool         `json:"is_active"`         // Активен ли тендер
+
+	// TODO: AI анализ
+	AIRelevanceScore    float64           `json:"ai_relevance_score"`    // Оценка релевантности (0-1)
+	AIRecommendation    AIRecommendation  `json:"ai_recommendation"`     // Рекомендация ИИ
+	AIConfidenceLevel   float64           `json:"ai_confidence_level"`   // Уровень уверенности ИИ
+	AIAnalysisReason    string            `json:"ai_analysis_reason"`    // Обоснование анализа
+	CompetitionLevel    CompetitionLevel  `json:"competition_level"`     // Уровень конкуренции
+	RiskFactors         []string          `json:"risk_factors"`          // Выявленные риски
+	Opportunities       []string          `json:"opportunities"`         // Возможности
+
+	// TODO: Документы
+	DocumentsURL       string    `json:"documents_url"`       // Ссылка на документы
+	DocumentsCount     int       `json:"documents_count"`     // Количество документов
+	TechnicalTaskFound bool      `json:"technical_task_found"` // Найдено ли техзадание
+	DocumentsProcessed bool      `json:"documents_processed"` // Обработаны ли документы
+	LastDocumentCheck  time.Time `json:"last_document_check"` // Последняя проверка документов
+
+	// TODO: Извлеченные продукты
+	ProductsExtracted     bool `json:"products_extracted"`      // Извлечены ли товары
+	ProductsCount         int  `json:"products_count"`          // Количество извлеченных товаров
+	ProductExtractionDate *time.Time `json:"product_extraction_date"` // Дата извлечения
+
+	// TODO: Поставщики и цены
+	SuppliersFound       bool       `json:"suppliers_found"`       // Найдены ли поставщики
+	SuppliersCount       int        `json:"suppliers_count"`       // Количество найденных поставщиков
+	EmailCampaignSent    bool       `json:"email_campaign_sent"`   // Отправлена ли email кампания
+	EmailResponsesCount  int        `json:"email_responses_count"` // Количество ответов
+	LastEmailSent        *time.Time `json:"last_email_sent"`       // Дата последнего письма
+	OptimalPriceCalculated bool     `json:"optimal_price_calculated"` // Рассчитана ли оптимальная цена
+	RecommendedPrice     *float64   `json:"recommended_price"`     // Рекомендуемая цена для участия
+
+	// TODO: Результаты участия
+	ParticipationDecision string     `json:"participation_decision"` // Решение об участии (yes/no/pending)
+	ApplicationSubmitted  bool       `json:"application_submitted"`  // Подана ли заявка
+	WinProbability       float64    `json:"win_probability"`        // Вероятность выигрыша (0-1)
+	ActualResult         *string    `json:"actual_result"`          // Фактический результат (won/lost/cancelled)
+	WinnerPrice          *float64   `json:"winner_price"`           // Цена победителя
+	ResultAnalyzed       bool       `json:"result_analyzed"`        // Проанализирован ли результат
+
+	// TODO: Метаданные
+	CreatedAt time.Time  `json:"created_at"` // Дата создания записи в системе
+	UpdatedAt time.Time  `json:"updated_at"` // Дата последнего обновления
+	DeletedAt *time.Time `json:"deleted_at"` // Дата удаления (soft delete)
 	
-	// 🔍 Идентификация тендера
-	ExternalID     string `json:"external_id" db:"external_id"`         // ID в системе закупок
-	Number         string `json:"number" db:"number"`                   // Номер тендера
-	Platform       string `json:"platform" db:"platform"`              // zakupki.gov.ru, szvo.gov35.ru
-	OriginalURL    string `json:"original_url" db:"original_url"`       // Ссылка на тендер
+	// TODO: Связи с другими сущностями (будут определены в репозитории)
+	// Products []Product - товары из техзадания
+	// Suppliers []Supplier - найденные поставщики  
+	// EmailCampaigns []EmailCampaign - email кампании
+	// Documents []Document - загруженные документы
+}
+
+// TODO: Перечисление статусов тендера
+type TenderStatus string
+
+const (
+	// TODO: Статусы на стороне закупочной площадки
+	TenderStatusPublished    TenderStatus = "published"     // Опубликован
+	TenderStatusApplications TenderStatus = "applications"  // Прием заявок
+	TenderStatusAuction      TenderStatus = "auction"       // Аукцион
+	TenderStatusEvaluation   TenderStatus = "evaluation"    // Рассмотрение заявок
+	TenderStatusCompleted    TenderStatus = "completed"     // Завершен
+	TenderStatusCancelled    TenderStatus = "cancelled"     // Отменен
+
+	// TODO: Статусы в нашей системе
+	TenderStatusNew              TenderStatus = "new"                // Новый тендер
+	TenderStatusAIAnalysis       TenderStatus = "ai_analysis"        // AI анализ
+	TenderStatusDocumentsPending TenderStatus = "documents_pending"  // Ожидание документов
+	TenderStatusProcessing       TenderStatus = "processing"         // Обработка документов
+	TenderStatusSupplierSearch   TenderStatus = "supplier_search"    // Поиск поставщиков
+	TenderStatusEmailCampaign    TenderStatus = "email_campaign"     // Email кампания
+	TenderStatusPriceAnalysis    TenderStatus = "price_analysis"     // Анализ цен
+	TenderStatusReady            TenderStatus = "ready"              // Готов к участию
+	TenderStatusParticipating    TenderStatus = "participating"      // Участвуем
+	TenderStatusResultsPending   TenderStatus = "results_pending"    // Ожидание результатов
+	TenderStatusResultsAnalyzed  TenderStatus = "results_analyzed"   // Результаты проанализированы
+	TenderStatusArchived         TenderStatus = "archived"           // Архивирован
+)
+
+// TODO: Рекомендации AI по участию в тендере
+type AIRecommendation string
+
+const (
+	AIRecommendationParticipate AIRecommendation = "participate" // Рекомендуется участвовать
+	AIRecommendationSkip        AIRecommendation = "skip"        // Пропустить
+	AIRecommendationAnalyze     AIRecommendation = "analyze"     // Требует дополнительного анализа
+	AIRecommendationWatchlist   AIRecommendation = "watchlist"   // Добавить в список наблюдения
+)
+
+// TODO: Уровень конкуренции в тендере
+type CompetitionLevel string
+
+const (
+	CompetitionLevelLow    CompetitionLevel = "low"    // Низкая конкуренция (1-3 участника)
+	CompetitionLevelMedium CompetitionLevel = "medium" // Средняя конкуренция (4-7 участников)
+	CompetitionLevelHigh   CompetitionLevel = "high"   // Высокая конкуренция (8+ участников)
+)
+
+// TODO: Бизнес-методы доменной сущности
+
+// IsActive проверяет, активен ли тендер (можно ли еще подать заявку)
+func (t *Tender) IsActiveForParticipation() bool {
+	now := time.Now()
+	return t.IsActive && 
+		   t.ApplicationDeadline.After(now) && 
+		   (t.Status == TenderStatusPublished || t.Status == TenderStatusApplications)
+}
+
+// DaysUntilDeadline возвращает количество дней до дедлайна подачи заявок
+func (t *Tender) DaysUntilDeadline() int {
+	if t.ApplicationDeadline.IsZero() {
+		return -1
+	}
+	duration := t.ApplicationDeadline.Sub(time.Now())
+	return int(duration.Hours() / 24)
+}
+
+// IsHighPriority определяет, является ли тендер высокоприоритетным
+func (t *Tender) IsHighPriority() bool {
+	return t.AIRelevanceScore >= 0.8 && 
+		   t.StartPrice >= 1000000 && // >= 1 млн рублей
+		   t.DaysUntilDeadline() >= 7 && // >= 7 дней до дедлайна
+		   t.CompetitionLevel != CompetitionLevelHigh
+}
+
+// CanProcessDocuments проверяет, можно ли обрабатывать документы
+func (t *Tender) CanProcessDocuments() bool {
+	return t.AIRelevanceScore >= 0.7 && 
+		   t.DocumentsURL != "" && 
+		   !t.DocumentsProcessed
+}
+
+// ShouldStartEmailCampaign проверяет, стоит ли запускать email кампанию
+func (t *Tender) ShouldStartEmailCampaign() bool {
+	return t.ProductsExtracted && 
+		   t.SuppliersFound && 
+		   !t.EmailCampaignSent &&
+		   t.DaysUntilDeadline() >= 3 // Минимум 3 дня до дедлайна
+}
+
+// CalculateWinProbability рассчитывает вероятность выигрыша на основе различных факторов
+func (t *Tender) CalculateWinProbability() float64 {
+	// TODO: Сложная логика расчета вероятности выигрыша
+	// Учитывает:
+	// - AI оценку релевантности
+	// - Уровень конкуренции
+	// - Соответствие цены
+	// - Историческую статистику
+	// - Качество технического предложения
 	
-	// 📄 Основная информация
-	Title          string    `json:"title" db:"title"`                 // Название тендера
-	Description    string    `json:"description" db:"description"`     // Описание
-	CustomerName   string    `json:"customer_name" db:"customer_name"` // Заказчик
-	CustomerINN    string    `json:"customer_inn" db:"customer_inn"`   // ИНН заказчика
-	Region         string    `json:"region" db:"region"`               // Регион
+	probability := t.AIRelevanceScore * 0.3 // 30% - релевантность
 	
-	// 💰 Финансовая информация
-	StartPrice     float64 `json:"start_price" db:"start_price"`         // Начальная цена
-	Currency       string  `json:"currency" db:"currency"`               // Валюта (RUB)
+	// Учитываем уровень конкуренции
+	switch t.CompetitionLevel {
+	case CompetitionLevelLow:
+		probability += 0.4 // +40% за низкую конкуренцию
+	case CompetitionLevelMedium:
+		probability += 0.2 // +20% за среднюю конкуренцию
+	case CompetitionLevelHigh:
+		probability += 0.0 // Высокая конкуренция не добавляет
+	}
 	
-	// 📅 Временные рамки
-	PublishedAt    time.Time  `json:"published_at" db:"published_at"`       // Дата публикации
-	SubmissionEnd  time.Time  `json:"submission_end" db:"submission_end"`   // Окончание подачи заявок
-	TenderEnd      time.Time  `json:"tender_end" db:"tender_end"`           // Окончание торгов
-	DeliveryPeriod int        `json:"delivery_period" db:"delivery_period"` // Срок поставки (дни)
+	// Учитываем наличие оптимальной цены
+	if t.OptimalPriceCalculated {
+		probability += 0.3 // +30% за оптимизированную цену
+	}
 	
-	// 🏥 Специфика медицинского оборудования
-	Category        TenderCategory `json:"category" db:"category"`               // Категория товаров
-	IsMedical       bool          `json:"is_medical" db:"is_medical"`           // Медицинское оборудование
-	IsEquipment     bool          `json:"is_equipment" db:"is_equipment"`       // Оборудование vs расходники
-	IsGoods         bool          `json:"is_goods" db:"is_goods"`               // Поставка товаров vs услуг
+	// Ограничиваем значение в диапазоне [0, 1]
+	if probability > 1.0 {
+		probability = 1.0
+	}
+	if probability < 0.0 {
+		probability = 0.0
+	}
 	
-	// 🤖 ИИ анализ
-	AIRelevanceScore  float64        `json:"ai_relevance_score" db:"ai_relevance_score"`   // Оценка релевантности ИИ (0-1)
-	AIAnalysis        string         `json:"ai_analysis" db:"ai_analysis"`                 // Анализ ИИ в JSON
-	AIRecommendation  AIRecommendation `json:"ai_recommendation" db:"ai_recommendation"`   // Рекомендация ИИ
+	return probability
+}
+
+// GetRiskLevel возвращает общий уровень риска участия
+func (t *Tender) GetRiskLevel() string {
+	riskCount := len(t.RiskFactors)
 	
-	// 📊 Статус обработки
-	Status            TenderStatus `json:"status" db:"status"`                     // Статус тендера
-	ProcessingStatus  ProcessingStatus `json:"processing_status" db:"processing_status"` // Статус обработки
-	DocumentsDownloaded bool       `json:"documents_downloaded" db:"documents_downloaded"` // Документы скачаны
-	ProductsExtracted   bool       `json:"products_extracted" db:"products_extracted"`     // Товары извлечены
-	SuppliersContacted  bool       `json:"suppliers_contacted" db:"suppliers_contacted"`   // Поставщики найдены
+	switch {
+	case riskCount == 0:
+		return "low"
+	case riskCount <= 2:
+		return "medium"
+	default:
+		return "high"
+	}
+}
+
+// ShouldParticipate принимает решение об участии на основе всех факторов
+func (t *Tender) ShouldParticipate() bool {
+	// TODO: Комплексная логика принятия решения
+	// Должна учитывать:
+	// - AI рекомендацию
+	// - Вероятность выигрыша
+	// - Уровень риска
+	// - Финансовую привлекательность
+	// - Стратегические цели компании
 	
-	// 📄 Связанные документы
-	DocumentsCount    int      `json:"documents_count" db:"documents_count"`       // Количество документов
-	TechnicalTaskURL  string   `json:"technical_task_url" db:"technical_task_url"` // Ссылка на техзадание
-	DocumentURLs      []string `json:"document_urls" db:"-"`                       // Все документы (JSON в БД)
+	if t.AIRecommendation == AIRecommendationSkip {
+		return false
+	}
 	
-	// 📈 Результаты тендера (заполняется после завершения)
-	WinnerCompany     string  `json:"winner_company" db:"winner_company"`         // Компания-победитель
-	WinnerPrice       float64 `json:"winner_price" db:"winner_price"`             // Цена победителя
-	WinnerDiscount    float64 `json:"winner_discount" db:"winner_discount"`       // Скидка (%)
-	TotalParticipants int     `json:"total_participants" db:"total_participants"` // Участников
+	if t.AIRecommendation == AIRecommendationParticipate && 
+	   t.CalculateWinProbability() >= 0.6 &&
+	   t.GetRiskLevel() != "high" {
+		return true
+	}
 	
-	// 🔗 Связи с другими сущностями
-	Products         []TenderProduct `json:"products" db:"-"`           // Товары в тендере
-	EmailCampaigns   []EmailCampaign `json:"email_campaigns" db:"-"`    // Email кампании
-	PriceAnalysis    *PriceAnalysis  `json:"price_analysis" db:"-"`     // Анализ цен
+	return false
+}
+
+// UpdateStatus обновляет статус тендера с валидацией переходов
+func (t *Tender) UpdateStatus(newStatus TenderStatus) error {
+	// TODO: Валидация допустимых переходов между статусами
+	// Например: new -> ai_analysis -> documents_pending -> processing и т.д.
+	
+	validTransitions := map[TenderStatus][]TenderStatus{
+		TenderStatusNew: {TenderStatusAIAnalysis, TenderStatusCancelled},
+		TenderStatusAIAnalysis: {TenderStatusDocumentsPending, TenderStatusArchived},
+		TenderStatusDocumentsPending: {TenderStatusProcessing, TenderStatusArchived},
+		// ... остальные переходы
+	}
+	
+	if allowedStatuses, exists := validTransitions[t.Status]; exists {
+		for _, allowedStatus := range allowedStatuses {
+			if allowedStatus == newStatus {
+				t.Status = newStatus
+				t.UpdatedAt = time.Now()
+				return nil
+			}
+		}
+	}
+	
+	return fmt.Errorf("invalid status transition from %s to %s", t.Status, newStatus)
+}
+
+// TODO: Дополнительные методы для бизнес-логики
+// - Валидация данных тендера
+// - Расчет метрик эффективности
+// - Генерация отчетов
+// - Интеграция с внешними системами
+// - Уведомления и алерты
+
+// Validate проверяет корректность данных тендера
+func (t *Tender) Validate() error {
+	// TODO: Валидация всех полей тендера
+	if t.TenderID == "" {
+		return fmt.Errorf("tender ID is required")
+	}
+	
+	if t.Title == "" {
+		return fmt.Errorf("tender title is required")
+	}
+	
+	if t.Platform == "" {
+		return fmt.Errorf("platform is required")
+	}
+	
+	if t.StartPrice < 0 {
+		return fmt.Errorf("start price cannot be negative")
+	}
+	
+	if t.ApplicationDeadline.Before(time.Now()) {
+		return fmt.Errorf("application deadline cannot be in the past")
+	}
+	
+	return nil
 }
 
 // 📊 ЕНУМЫ И КОНСТАНТЫ

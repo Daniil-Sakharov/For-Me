@@ -1,130 +1,88 @@
-// 🤖 МОДУЛЬ ДЛЯ СИСТЕМЫ АВТОМАТИЗАЦИИ ТЕНДЕРОВ С ИИ
-//
-// Специализированная система для:
-// - Поиска и анализа тендеров на медицинское оборудование  
-// - Автоматической обработки документов с ИИ
-// - Интеграции с поставщиками через email
-// - Оптимизации цен на основе исторических данных
-
-module tender-automation-system
+module tender-automation
 
 go 1.21
 
 require (
-	// ✅ БАЗОВЫЕ ЗАВИСИМОСТИ:
-	github.com/go-playground/validator/v10 v10.16.0 // Валидация данных
-	golang.org/x/crypto v0.17.0                     // Безопасность
-	
-	// 🗄️ БАЗЫ ДАННЫХ:
-	github.com/lib/pq v1.10.9                       // PostgreSQL для основных данных
-	go.mongodb.org/mongo-driver v1.13.1             // MongoDB для документов и неструктурированных данных
-	github.com/redis/go-redis/v9 v9.3.0             // Redis для кеширования и очередей
-	
-	// 🕷️ WEB SCRAPING И ПАРСИНГ:
-	github.com/gocolly/colly/v2 v2.1.0              // Мощный фреймворк для скрапинга
-	github.com/PuerkitoBio/goquery v1.8.1           // jQuery-like селекторы для HTML
-	github.com/chromedp/chromedp v0.9.3             // Headless Chrome для динамических сайтов
-	github.com/playwright-community/playwright-go v0.4000.0 // Альтернатива для сложных сайтов
-	
-	// 📄 ОБРАБОТКА ДОКУМЕНТОВ:
-	github.com/unidoc/unioffice v1.28.0             // Работа с DOC/DOCX файлами
-	github.com/ledongthuc/pdf v0.0.0-20220302134840-0c2507a12d80 // PDF обработка
-	github.com/tealeg/xlsx/v3 v3.3.2                // Excel файлы
-	
-	// 🤖 ИИ И МАШИННОЕ ОБУЧЕНИЕ:
-	github.com/sashabaranov/go-openai v1.17.9       // OpenAI API (альтернатива для Llama)
-	github.com/ggerganov/whisper.cpp/bindings/go v0.0.0-20231117122806-ed6bf6543fd9 // Local AI
-	github.com/ollama/ollama v0.1.17                // Локальные LLM модели (для Llama)
-	
-	// 📧 EMAIL ОБРАБОТКА:
-	github.com/go-mail/mail/v2 v2.3.0               // Отправка писем
-	github.com/emersion/go-imap v1.2.1              // Чтение входящих писем
-	github.com/jhillyerd/enmime v0.10.1             // Парсинг email сообщений
-	
-	// 🌐 HTTP И API:
-	github.com/gin-gonic/gin v1.9.1                 // Web framework для API
-	github.com/gorilla/websocket v1.5.1             // WebSocket для real-time уведомлений
-	
-	// 📊 ОЧЕРЕДИ И ФОНОВЫЕ ЗАДАЧИ:
-	github.com/hibiken/asynq v0.24.1                // Redis-based task queue
-	github.com/robfig/cron/v3 v3.0.1                // Cron jobs для расписания
-	
-	// 🔍 ПОИСК И ИНДЕКСАЦИЯ:
-	github.com/elastic/go-elasticsearch/v8 v8.11.1  // Elasticsearch для поиска по документам
-	github.com/blevesearch/bleve/v2 v2.3.10         // Встроенный full-text search
-	
-	// 📈 АНАЛИТИКА И МЕТРИКИ:
-	github.com/prometheus/client_golang v1.17.0     // Метрики
-	go.uber.org/zap v1.26.0                         // Логирование
-	
-	// 🔧 УТИЛИТЫ:
-	github.com/spf13/cobra v1.8.0                   // CLI интерфейс
-	github.com/spf13/viper v1.18.2                  // Конфигурация
-	github.com/joho/godotenv v1.4.0                 // .env файлы
-	
-	// 🧪 ТЕСТИРОВАНИЕ:
-	github.com/stretchr/testify v1.8.4              // Testing framework
-	github.com/golang/mock v1.6.0                   // Mocking
-	
-	// 🛡️ БЕЗОПАСНОСТЬ:
-	github.com/golang-jwt/jwt/v5 v5.2.0             // JWT токены
+	// TODO: Web Framework (выберите один)
+	github.com/gin-gonic/gin v1.9.1          // Популярный Go веб-фреймворк
+	// github.com/labstack/echo/v4 v4.11.3    // Альтернатива Gin
+	// github.com/gofiber/fiber/v2 v2.52.0    // Быстрый веб-фреймворк
+
+	// TODO: База данных
+	github.com/lib/pq v1.10.9                      // PostgreSQL драйвер
+	go.mongodb.org/mongo-driver v1.13.1            // MongoDB драйвер
+	github.com/go-redis/redis/v8 v8.11.5           // Redis client
+
+	// TODO: ORM (опционально, предпочтительно plain SQL)
+	// github.com/jmoiron/sqlx v1.3.5              // SQL расширения
+	// gorm.io/gorm v1.25.5                        // ORM (не рекомендуется для Clean Architecture)
+
+	// TODO: Конфигурация
+	github.com/spf13/viper v1.18.2                 // Загрузка конфигурации
+	github.com/joho/godotenv v1.5.1                // Загрузка .env файлов
+
+	// TODO: Логирование
+	go.uber.org/zap v1.26.0                        // Structured logging
+	github.com/sirupsen/logrus v1.9.3              // Альтернатива Zap
+
+	// TODO: Валидация
+	github.com/go-playground/validator/v10 v10.16.0
+
+	// TODO: Web Scraping
+	github.com/gocolly/colly/v2 v2.1.0             // Web scraping framework
+	github.com/chromedp/chromedp v0.9.3            // Headless Chrome automation
+	github.com/playwright-community/playwright-go v0.4001.0 // Альтернатива ChromeDP
+
+	// TODO: Document Processing
+	github.com/unidoc/unioffice v1.28.0            // DOC/DOCX обработка
+	github.com/ledongthuc/pdf v0.0.0-20220302134840-0c2394612674 // PDF обработка
+	github.com/xuri/excelize/v2 v2.8.0             // Excel обработка
+	github.com/PuerkitoBio/goquery v1.8.1          // HTML parsing
+
+	// TODO: AI/ML Integration  
+	// Ollama client для Llama 4 Maviric
+	github.com/ollama/ollama v0.1.17               // Ollama Go client
+	// github.com/sashabaranov/go-openai v1.17.9   // OpenAI API (альтернатива)
+
+	// TODO: Email
+	gopkg.in/mail.v2 v2.3.1                       // SMTP отправка
+	github.com/emersion/go-imap v1.2.1             // IMAP для чтения писем
+	github.com/jhillyerd/enmime v0.10.1            // Email parsing
+
+	// TODO: Background Jobs & Scheduling
+	github.com/hibiken/asynq v0.24.1               // Redis-based task queue
+	github.com/robfig/cron/v3 v3.0.1               // Cron scheduler
+
+	// TODO: Поиск и индексация
+	github.com/olivere/elastic/v7 v7.0.32          // Elasticsearch client
+	github.com/blevesearch/bleve/v2 v2.3.10        // Локальный поисковый движок
+
+	// TODO: CLI
+	github.com/spf13/cobra v1.8.0                  // CLI framework
+
+	// TODO: Мониторинг
+	github.com/prometheus/client_golang v1.18.0    // Prometheus metrics
+
+	// TODO: HTTP клиент
+	github.com/go-resty/resty/v2 v2.11.0           // HTTP client с retry и middleware
+
+	// TODO: Утилиты
+	github.com/google/uuid v1.5.0                  // UUID генерация
+	github.com/stretchr/testify v1.8.4             // Testing utilities
+	golang.org/x/crypto v0.17.0                    // Криптографические утилиты
 	golang.org/x/time v0.5.0                       // Rate limiting
-	
-	// 📂 ФАЙЛОВАЯ СИСТЕМА:
-	github.com/aws/aws-sdk-go-v2 v1.24.0           // AWS S3 для хранения файлов
-	github.com/minio/minio-go/v7 v7.0.66           // MinIO для локального хранения
-	
-	// 🔄 АВТОМАТИЗАЦИЯ:
-	github.com/fsnotify/fsnotify v1.7.0             // Мониторинг файлов
-	github.com/kardianos/service v1.2.2             // Системный сервис
+
+	// TODO: File Storage (опционально)
+	// github.com/aws/aws-sdk-go v1.49.0           // AWS S3
+	// github.com/minio/minio-go/v7 v7.0.66        // MinIO client
+
+	// TODO: Message Queue (альтернативы Redis)
+	// github.com/nats-io/nats.go v1.31.0          // NATS
+	// github.com/rabbitmq/amqp091-go v1.9.0       // RabbitMQ
 )
 
-// 📝 СПЕЦИФИЧНЫЕ ЗАВИСИМОСТИ ДЛЯ ТЕНДЕРНОЙ СИСТЕМЫ:
-//
-// 🕷️ Scraping Stack:
-// - colly: основной scraper для статических сайтов
-// - chromedp: для сайтов с JavaScript (zakupki.gov.ru)
-// - playwright: бэкап для сложных сайтов
-//
-// 📄 Document Processing:
-// - unioffice: для чтения технических заданий (DOC/DOCX)
-// - pdf: для PDF документов
-// - xlsx: для таблиц с ценами
-//
-// 🤖 AI Integration:
-// - ollama: для запуска Llama модели локально
-// - go-openai: совместимый API интерфейс
-//
-// 📧 Email Automation:
-// - go-mail: отправка коммерческих предложений
-// - go-imap: чтение ответов от поставщиков
-//
-// 🔍 Search & Analytics:
-// - elasticsearch: индексация товаров и документов
-// - bleve: встроенный поиск как fallback
-//
-// 📊 Background Processing:
-// - asynq: очереди для обработки тендеров
-// - cron: расписание автоматических проверок
-//
-// 🔧 ИНСТРУКЦИЯ ПО НАСТРОЙКЕ:
-//
-// 1. Установите зависимости:
-//    go mod tidy
-//
-// 2. Настройте внешние сервисы:
-//    - PostgreSQL для основных данных
-//    - MongoDB для документов  
-//    - Redis для очередей
-//    - Elasticsearch для поиска (опционально)
-//
-// 3. Настройте AI модель:
-//    - Скачайте Llama 4 через Ollama
-//    - Или настройте API ключи для облачных сервисов
-//
-// 4. Настройте email:
-//    - SMTP сервер для отправки
-//    - IMAP для чтения ответов
-//
-// 5. Настройте хранилище файлов:
-//    - AWS S3 или MinIO для документов тендеров
+// TODO: Replace directives (если используете локальные модули)
+// replace (
+//     tender-automation/internal => ./internal
+//     tender-automation/pkg => ./pkg
+// )
