@@ -1,0 +1,286 @@
+# 📄 Pipeline: Document Processing
+# Конфигурация пайплайна для обработки документов тендеров
+
+name: "document-processing"
+version: "1.0"
+description: "Автоматическая обработка документов тендеров и извлечение товаров"
+
+# ⏰ Расписание запуска
+schedule:
+  interval: "30m"          # Каждые 30 минут
+  timezone: "Europe/Moscow"
+  enabled: true
+
+# 🔧 Конфигурация
+config:
+  # Поддерживаемые форматы документов
+  supported_formats:
+    - "pdf"
+    - "doc"
+    - "docx"
+    - "xlsx"
+    - "xls"
+    - "rtf"
+    - "txt"
+  
+  # Настройки загрузки
+  download:
+    max_file_size: "50MB"
+    timeout: "300s"
+    concurrent_downloads: 5
+    retry_count: 3
+    
+  # Настройки обработки
+  processing:
+    max_processing_time: "10m"
+    temp_directory: "/tmp/tender_docs"
+    preserve_original: true
+    generate_thumbnails: false
+
+# 🔄 Этапы пайплайна
+stages:
+  # ЭТАП 1: Получение списка документов для обработки
+  - name: "document_discovery"
+    type: "sequential"
+    timeout: "5m"
+    
+    steps:
+      - name: "fetch_pending_tenders"
+        type: "database_query"
+        description: "Получение тендеров с необработанными документами"
+        query: |
+          SELECT t.id, t.title, t.documents_url, t.platform
+          FROM tenders t 
+          WHERE t.status = 'documents_pending' 
+          AND t.ai_relevance_score >= 0.7
+          ORDER BY t.created_at DESC
+          LIMIT 100
+          
+      - name: "prioritize_documents"
+        type: "sorter"
+        description: "Приоритизация по важности и дедлайнам"
+        criteria:
+          - "deadline_proximity"
+          - "ai_relevance_score"
+          - "budget_amount"
+
+  # ЭТАП 2: Скачивание документов
+  - name: "document_download"
+    type: "parallel"
+    timeout: "20m"
+    batch_size: 3
+    
+    steps:
+      - name: "download_files"
+        type: "downloader"
+        config:
+          user_agent: "TenderBot Document Processor/1.0"
+          headers:
+            Accept: "application/pdf,application/msword,application/vnd.openxmlformats-officedocument.*"
+          follow_redirects: true
+          verify_ssl: true
+          
+      - name: "virus_scan"
+        type: "security_scanner"
+        description: "Проверка файлов на вирусы"
+        config:
+          engine: "clamav"
+          quarantine_suspicious: true
+          
+      - name: "format_validation"
+        type: "validator"
+        description: "Проверка формата и целостности файлов"
+
+  # ЭТАП 3: Извлечение текста
+  - name: "text_extraction"
+    type: "parallel"
+    timeout: "15m"
+    
+    steps:
+      - name: "extract_pdf"
+        type: "text_extractor"
+        condition: "file_type == 'pdf'"
+        config:
+          engine: "pdfplumber"
+          preserve_layout: true
+          extract_tables: true
+          ocr_fallback: true
+          
+      - name: "extract_office"
+        type: "text_extractor"
+        condition: "file_type in ['doc', 'docx', 'rtf']"
+        config:
+          engine: "unioffice"
+          preserve_formatting: true
+          extract_tables: true
+          
+      - name: "extract_excel"
+        type: "text_extractor"
+        condition: "file_type in ['xls', 'xlsx']"
+        config:
+          engine: "excelize"
+          extract_all_sheets: true
+          preserve_formulas: false
+
+  # ЭТАП 4: Поиск технического задания
+  - name: "technical_task_identification"
+    type: "sequential"
+    timeout: "10m"
+    
+    steps:
+      - name: "content_analysis"
+        type: "ai_processor"
+        model: "llama4-maviric"
+        config:
+          prompt_template: "technical_task_identification"
+          max_tokens: 2000
+          
+      - name: "keyword_matching"
+        type: "keyword_matcher"
+        keywords:
+          technical_task_indicators:
+            - "техническое задание"
+            - "спецификация"
+            - "требования к товару"
+            - "характеристики оборудования"
+            - "перечень медицинского оборудования"
+          
+      - name: "table_detection"
+        type: "table_detector"
+        description: "Поиск таблиц с товарами"
+
+  # ЭТАП 5: AI извлечение товаров
+  - name: "product_extraction"
+    type: "sequential"
+    timeout: "20m"
+    
+    steps:
+      - name: "ai_product_analysis"
+        type: "ai_processor"
+        model: "llama4-maviric"
+        config:
+          prompt_template: "product_extraction"
+          max_tokens: 4000
+          temperature: 0.1
+          extract_schema:
+            products:
+              - name: "string"
+                category: "string"
+                specifications: "object"
+                quantity: "integer"
+                unit: "string"
+                max_price: "float"
+                requirements: "array"
+                
+      - name: "data_validation"
+        type: "validator"
+        description: "Проверка извлеченных данных"
+        validation_rules:
+          - "product_name_not_empty"
+          - "quantity_is_positive"
+          - "price_is_reasonable"
+          
+      - name: "category_classification"
+        type: "ai_processor"
+        model: "llama4-maviric"
+        config:
+          prompt_template: "equipment_categorization"
+          categories:
+            - "Диагностическое оборудование"
+            - "Лабораторное оборудование"
+            - "Хирургическое оборудование"
+            - "Терапевтическое оборудование"
+            - "Реабилитационное оборудование"
+            - "Медицинские расходники"
+            - "Мебель медицинская"
+
+  # ЭТАП 6: Обогащение данных
+  - name: "data_enrichment"
+    type: "parallel"
+    timeout: "10m"
+    
+    steps:
+      - name: "specifications_parsing"
+        type: "ai_processor"
+        description: "Извлечение технических характеристик"
+        
+      - name: "compliance_check"
+        type: "compliance_checker"
+        description: "Проверка соответствия медицинским стандартам"
+        standards:
+          - "ГОСТ Р ИСО 13485"
+          - "ГОСТ Р 50444"
+          - "ТР ТС 021/2011"
+          
+      - name: "generate_search_terms"
+        type: "ai_processor"
+        description: "Генерация поисковых запросов для поиска поставщиков"
+
+  # ЭТАП 7: Сохранение результатов
+  - name: "persistence"
+    type: "sequential"
+    timeout: "5m"
+    
+    steps:
+      - name: "save_products"
+        type: "database"
+        description: "Сохранение извлеченных товаров"
+        
+      - name: "update_tender_status"
+        type: "database"
+        description: "Обновление статуса тендера"
+        
+      - name: "index_for_search"
+        type: "search_indexer"
+        description: "Индексация для поиска"
+        
+      - name: "emit_events"
+        type: "event_emitter"
+        events:
+          - "products_extracted"
+          - "tender_ready_for_supplier_search"
+
+# 📊 Мониторинг
+monitoring:
+  metrics:
+    - name: "documents_processed"
+      type: "counter"
+      
+    - name: "products_extracted"
+      type: "counter"
+      
+    - name: "extraction_accuracy"
+      type: "gauge"
+      
+    - name: "processing_time_per_document"
+      type: "histogram"
+
+  alerts:
+    - name: "low_extraction_accuracy"
+      condition: "extraction_accuracy < 80%"
+      severity: "warning"
+      
+    - name: "processing_timeout"
+      condition: "processing_time > 30m"
+      severity: "critical"
+
+# 🧪 Валидация качества
+quality_assurance:
+  sampling_rate: 0.1        # 10% документов проверяются вручную
+  
+  quality_metrics:
+    - name: "product_name_accuracy"
+      target: 95
+      
+    - name: "specification_completeness"
+      target: 85
+      
+    - name: "price_extraction_accuracy"
+      target: 90
+
+# 📈 Ожидаемые результаты
+expected_results:
+  documents_per_run: 20-50
+  products_per_document: 5-25
+  processing_time_per_doc: 2-8  # минут
+  extraction_accuracy: 85-95    # процентов
